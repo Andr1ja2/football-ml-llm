@@ -13,14 +13,21 @@ def load_data():
         "home_prob",
         "draw_prob",
         "away_prob",
+
         "home_matches_played",
         "home_avg_gf",
         "home_avg_ga",
         "home_winrate",
+
         "away_matches_played",
         "away_avg_gf",
         "away_avg_ga",
         "away_winrate",
+
+        "home_attack_strength",
+        "home_defense_strength",
+        "away_attack_strength",
+        "away_defense_strength",
     ]
     X = df[feature_cols].values
     y = df["label_1x2"].values
@@ -36,14 +43,21 @@ def main():
         "home_prob",
         "draw_prob",
         "away_prob",
+
         "home_matches_played",
         "home_avg_gf",
         "home_avg_ga",
         "home_winrate",
+
         "away_matches_played",
         "away_avg_gf",
         "away_avg_ga",
         "away_winrate",
+
+        "home_attack_strength",
+        "home_defense_strength",
+        "away_attack_strength",
+        "away_defense_strength",
     ]
 
     # Drop any rows with NaNs in feature columns or label

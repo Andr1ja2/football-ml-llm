@@ -3,3 +3,7 @@ numpy
 scikit-learn
 joblib
 requests
+python-dotenv
+rapidfuzz
+matplotlib
+tqdm

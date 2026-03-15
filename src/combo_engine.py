@@ -19,6 +19,11 @@ def build_combos(candidates, requested_size):
     combos = []
 
     for legs in itertools.combinations(candidates, requested_size):
+        matches = [leg["match"] for leg in legs]
+
+        if len(matches) != len(set(matches)): # match uniqueness check (may not be needed)
+            continue
+
         prob = combo_probability(legs)
         odds = combo_odds(legs)
         ev = combo_ev(prob, odds)

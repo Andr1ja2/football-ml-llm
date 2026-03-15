@@ -2,6 +2,8 @@ from select_candidates import load, predict_row
 from combo_engine import build_combos, MAX_LEGS
 from predict_btts import load as load_btts, predict_row as predict_btts
 from predict_ou25 import load as load_ou, predict_row as predict_ou
+from fixture_adapter import load_fixtures
+from live_candidates import get_live_candidates
 
 def collect_candidates(df, model_1x2):
     btts_df, btts_model = load_btts()
@@ -14,14 +16,40 @@ def collect_candidates(df, model_1x2):
         pred = predict_row(row, model_1x2)
 
         # 1X2
-        for outcome, data in pred["outcomes"].items():
-            if data["edge"] >= 0.05 and data["model_prob"] >= 0.45:
+        labels = ["HOME", "DRAW", "AWAY"]
+
+        model_probs = [
+            pred["outcomes"]["HOME"]["model_prob"],
+            pred["outcomes"]["DRAW"]["model_prob"],
+            pred["outcomes"]["AWAY"]["model_prob"],
+        ]
+
+        book_probs = [
+            pred["outcomes"]["HOME"]["book_prob"],
+            pred["outcomes"]["DRAW"]["book_prob"],
+            pred["outcomes"]["AWAY"]["book_prob"],
+        ]
+
+        for i, outcome in enumerate(labels):
+
+            model_prob = model_probs[i]
+            book_prob = book_probs[i]
+
+            odds = 1 / (book_prob * 1.05)
+
+            EV = model_prob * odds - 1
+
+            # only home bets with EV >= 0.06
+            if outcome == "HOME" and EV >= 0.06:
+
                 candidates.append({
                     "match": pred["match"],
+                    "market": "1X2",
                     "outcome": outcome,
-                    "model_prob": data["model_prob"],
-                    "book_prob": data["book_prob"],
-                    "edge": data["edge"],
+                    "model_prob": model_prob,
+                    "book_prob": book_prob,
+                    "edge": EV,
+                    "ev": EV,
                 })
 
         # BTTS
@@ -34,6 +62,7 @@ def collect_candidates(df, model_1x2):
                 if edge >= 0.05 and p >= 0.45:
                     candidates.append({
                         "match": pred["match"],
+                        "market": "BTTS",
                         "outcome": o,
                         "model_prob": p,
                         "book_prob": book,
@@ -50,6 +79,7 @@ def collect_candidates(df, model_1x2):
                 if edge >= 0.05 and p >= 0.45:
                     candidates.append({
                         "match": pred["match"],
+                        "market": "OU25",
                         "outcome": o,
                         "model_prob": p,
                         "book_prob": book,
@@ -59,14 +89,13 @@ def collect_candidates(df, model_1x2):
     return candidates
 
 def main(requested_size, return_objects=False):
-    df, model = load()
-
     was_capped = False
     if requested_size > MAX_LEGS:
         requested_size = MAX_LEGS
         was_capped = True
 
-    candidates = collect_candidates(df, model)
+    candidates = get_live_candidates()
+    
     combos = build_combos(candidates, requested_size)
 
     if return_objects:

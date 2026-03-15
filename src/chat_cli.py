@@ -7,14 +7,32 @@ MAX_LEGS = 4
 DEFAULT_SIZE = 3
 
 SYSTEM_EXPLAIN_PROMPT = """
-You are a football betting assistant.
+You are explaining a football betting ticket.
 
-STRICT RULES:
-- You MUST NOT invent matches, teams, odds, or probabilities.
-- You MUST ONLY explain the ticket provided.
-- You MUST NOT add or remove selections.
-- Risk is based ONLY on combined probability.
-- Keep the explanation short and factual.
+Use ONLY the information provided in the ticket.
+Do NOT invent markets or reinterpret them.
+
+Markets mean:
+
+1X2:
+HOME = home team wins
+DRAW = match ends in draw
+AWAY = away team wins
+
+BTTS:
+YES = both teams score
+NO = at least one team does not score
+
+OU25:
+OVER = total goals over 2.5
+UNDER = total goals under 2.5
+
+Explain:
+- the selections
+- probability
+- risk
+
+Do not invent additional meaning.
 """
 
 CASUAL_CHAT_PROMPT = """

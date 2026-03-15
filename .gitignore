@@ -1,20 +1,30 @@
 # Python
 __pycache__/
 *.pyc
+*.pyo
 
 # Virtual environments
 .venv/
 venv/
+.env
 
-# Data
-data/raw/
-data/processed/
+# Model artifacts
+*.pkl
+
+# Data files
+data/raw/*
+data/processed/*
 data/db.sqlite
+data/backup
 
-# Editor
+# Keep folder structure
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Editor / IDE
 .DS_Store
 .idea/
 .vscode/
 
-# Misc
-*.pkl
+# Logs
+*.log

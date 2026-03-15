@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 
 from database import get_connection
+from team_strength import compute_team_strength
 
 OUTPUT_DIR = Path(__file__).resolve().parent.parent / "data" / "processed"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -164,6 +165,7 @@ def build_1x2_dataset():
     df = load_base_df()
     df = add_implied_probabilities(df)
     df = add_team_form_features(df, window=5)
+    df = compute_team_strength(df)
     df = encode_label(df)
 
     # Drop rows where there was not enough history (optional)
@@ -175,14 +177,22 @@ def build_1x2_dataset():
         "home_prob",
         "draw_prob",
         "away_prob",
+
         "home_matches_played",
         "home_avg_gf",
         "home_avg_ga",
         "home_winrate",
+
         "away_matches_played",
         "away_avg_gf",
         "away_avg_ga",
         "away_winrate",
+
+        "home_attack_strength",
+        "home_defense_strength",
+
+        "away_attack_strength",
+        "away_defense_strength",
     ]
 
     out_df = df[["match_id", "date", "home_team", "away_team"] + feature_cols + ["label_1x2"]].copy()
