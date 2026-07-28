@@ -1,3 +1,7 @@
+# This script implements a command-line interface for a tool-aware betting chat application. 
+# It allows users to interact with an AI model that can either engage in casual conversation or generate football betting tickets based on user input. 
+# The AI model decides the appropriate action based on the user's message and the conversation context.
+# The LLM's role is to understand the user's request and decide which tool to invoke, present the results and avoid making up information.
 import json
 from llm_client import ask_model
 from tool_decider import decide_action

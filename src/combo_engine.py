@@ -1,8 +1,12 @@
+# build_combos generates every possible ticket combination of a given size from a list of betting candidates, 
+# calculates the probability, odds, and expected value for each combination, and filters out combinations that do not meet specified thresholds. 
+# It returns a sorted list of valid combinations based on expected value.
 import itertools
 from math import prod
 
 # ---- CONFIG ----
-MAX_LEGS = 5
+# maximum number of legs in a combination, I found that my machine can handle up to 5 legs without running out of memory, but more than that may cause issues.
+MAX_LEGS = 5 
 MIN_EV = 0.05
 MIN_COMBO_PROB = 0.05
 

@@ -1,3 +1,6 @@
+# collect_candidates function takes a dataframe of matches and a trained model for 1X2 predictions, 
+# and returns a list of all valid betting candidates with their respective edges and probabilities
+# main function prints the top combinations based on expected value.
 from select_candidates import load, predict_row
 from combo_engine import build_combos, MAX_LEGS
 from predict_btts import load as load_btts, predict_row as predict_btts

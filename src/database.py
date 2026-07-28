@@ -1,3 +1,4 @@
+# This script creates the SQLite database and the necessary tables for storing match data and betting odds.
 import sqlite3
 from pathlib import Path
 

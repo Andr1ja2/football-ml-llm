@@ -1,3 +1,5 @@
+# This script fetches live odds data from the Odds API for various soccer leagues and 
+# processes it to create a list of betting candidates with normalized probabilities.
 import os
 import requests
 from dotenv import load_dotenv

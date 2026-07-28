@@ -1,3 +1,5 @@
+# This script selects betting candidates based on model predictions and edges.
+# classify_outcome function checks if the edge and model probability meet the thresholds.
 from predict_1x2 import load, predict_row
 import pandas as pd
 

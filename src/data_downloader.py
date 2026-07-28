@@ -1,3 +1,5 @@
+# This script downloads football match data from football-data.co.uk for specified seasons and leagues
+# It saves the data in CSV format in the "data/raw" directory.
 import requests
 from pathlib import Path
 
@@ -20,13 +22,23 @@ SEASONS = [
 
 # League codes on football-data.co.uk
 # You can add more later if you want even more games.
+# LEAGUES = [
+#     "E0",  # England Premier League
+#     "E1",  # England Championship
+#     "D1",  # Germany Bundesliga
+#     "SP1", # Spain La Liga
+#     "I1",  # Italy Serie A
+#     "F1",  # France Ligue 1
+# ]
 LEAGUES = [
-    "E0",  # England Premier League
+    "E0",  # Premier League
     "E1",  # England Championship
-    "D1",  # Germany Bundesliga
-    "SP1", # Spain La Liga
-    "I1",  # Italy Serie A
-    "F1",  # France Ligue 1
+    "D1",  # Bundesliga
+    "SP1", # La Liga
+    "I1",  # Serie A
+    "F1",  # Ligue 1
+    "P1",  # Portugal
+    "N1",  # Netherlands
 ]
 
 BASE_URL = "https://www.football-data.co.uk/mmz4281/{season}/{league}.csv"

@@ -1,11 +1,14 @@
 import os
-import requests
+from pathlib import Path
+
+import joblib
 import numpy as np
 import pandas as pd
-import joblib
-from pathlib import Path
+import requests
 from dotenv import load_dotenv
-from team_form import load_match_history, compute_team_stats, TeamResolver
+
+from feature_defs import FEATURE_COLS_1X2
+from team_form import TeamResolver, build_live_feature_dict, compute_team_stats, load_match_history
 
 load_dotenv()
 
@@ -24,63 +27,34 @@ SPORTS = [
 
 BASE_URL = "https://api.the-odds-api.com/v4/sports/{sport}/odds"
 
-
 HISTORY_DF = load_match_history()
 RESOLVER = TeamResolver(HISTORY_DF)
 
 
-def decimal_to_prob(odds):
-    return 1.0 / odds if odds > 0 else 0
+def decimal_to_prob(odds: float) -> float:
+    return 1.0 / odds if odds > 0 else 0.0
 
 
-def normalize_probs(probs):
+def normalize_probs(probs: list[float]) -> list[float]:
     total = sum(probs)
     if total == 0:
         return probs
     return [p / total for p in probs]
 
 
-def build_feature_vector(home_team, away_team, book_probs):
-
+def build_feature_vector(home_team: str, away_team: str, book_probs: list[float]) -> np.ndarray | None:
     home_stats = compute_team_stats(HISTORY_DF, RESOLVER, home_team)
     away_stats = compute_team_stats(HISTORY_DF, RESOLVER, away_team)
 
     if home_stats is None or away_stats is None:
         return None
 
-    h_n, h_gf, h_ga, h_win = home_stats
-    a_n, a_gf, a_ga, a_win = away_stats
-
-    # simple attack/defense estimation
-    home_attack = h_gf
-    home_defense = h_ga
-
-    away_attack = a_gf
-    away_defense = a_ga
-
-    return np.array([
-        book_probs[0],
-        book_probs[1],
-        book_probs[2],
-
-        h_n,
-        h_gf,
-        h_ga,
-        h_win,
-
-        a_n,
-        a_gf,
-        a_ga,
-        a_win,
-
-        home_attack,
-        away_attack,
-        home_defense,
-        away_defense
-    ]).reshape(1, -1)
+    features = build_live_feature_dict(home_stats, away_stats, book_probs)
+    values = [features[col] for col in FEATURE_COLS_1X2]
+    return np.array(values).reshape(1, -1)
 
 
-def fetch_candidates():
+def fetch_candidates() -> list[dict]:
     candidates = []
 
     for sport in SPORTS:
@@ -115,7 +89,6 @@ def fetch_candidates():
             if len(outcomes) != 3:
                 continue
 
-            # Extract odds
             home_odds = None
             draw_odds = None
             away_odds = None
@@ -130,29 +103,24 @@ def fetch_candidates():
                 elif name == "draw":
                     draw_odds = o["price"]
 
-            # Skip if anything missing
             if home_odds is None or draw_odds is None or away_odds is None:
                 continue
 
             prices = [home_odds, draw_odds, away_odds]
-
             raw_probs = [decimal_to_prob(p) for p in prices]
             book_probs = normalize_probs(raw_probs)
 
-
-            # Run model
             X = build_feature_vector(home, away, book_probs)
             if X is None:
                 continue
-            model_probs = MODEL.predict_proba(X)[0]
-            # model_probs = np.clip(model_probs, 0.05, 0.85) # can prevent absurd values (but may be wrong)
 
+            model_probs = MODEL.predict_proba(X)[0]
             labels = ["HOME", "DRAW", "AWAY"]
 
             for i in range(3):
                 edge = model_probs[i] - book_probs[i]
 
-                if edge >= 0.03 and model_probs[i] >= 0.4: # arbitrary thresholds for value
+                if labels[i] == "HOME" and edge >= 0.06:
                     candidates.append({
                         "match": f"{home} vs {away}",
                         "market": "1X2",
@@ -162,7 +130,7 @@ def fetch_candidates():
                         "edge": float(edge),
                     })
 
-    return candidates
+    return sorted(candidates, key=lambda x: x["edge"], reverse=True)
 
 
 if __name__ == "__main__":

@@ -4,9 +4,7 @@ import json
 OLLAMA_URL = "http://localhost:11434/api/generate"
 
 def ask_model(prompt: str, model: str = "mistral") -> str:
-    """
-    Sends a prompt to the local Ollama model and returns the full response.
-    """
+    # Sends a prompt to the local Ollama model and returns the full response.
     data = {
         "model": model,
         "prompt": prompt,

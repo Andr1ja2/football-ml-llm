@@ -1,3 +1,5 @@
+# This script imports raw CSV data into the SQLite database. It assumes that the database schema has already been created.
+# For every row it read: home team, away team, goals, result, odds and date. It then inserts the data into the matches and odds tables.
 import csv
 from pathlib import Path
 from database import get_connection

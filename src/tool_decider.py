@@ -1,3 +1,5 @@
+# AI model picks between CASUAL_CHAT and GENERATE_COMBOS actions based on the current user message and conversation context.
+# returns a JSON object with the chosen action and any necessary parameters
 import json
 from llm_client import ask_model
 

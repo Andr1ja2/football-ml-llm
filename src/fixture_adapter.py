@@ -1,20 +1,15 @@
-from mock_upcoming import load_mock_upcoming
+from live_candidates import get_live_candidates
 
+def load_fixtures(source="live"):
+    # Adapter used by the combo engine
+    # Returns live betting candidates instead of mock fixtures
 
-def load_fixtures(source="mock", **kwargs):
-    """
-    Returns:
-      {
-        "fixtures": DataFrame,
-        "models": {
-            "1x2": model,
-            "btts": model,
-            "ou25": model
+    if source == "live":
+        candidates = get_live_candidates()
+
+        return {
+            "fixtures": candidates,
+            "models": {}
         }
-      }
-    """
 
-    if source == "mock":
-        return load_mock_upcoming(**kwargs)
-
-    raise ValueError(f"Unknown fixture source: {source}")
+    raise ValueError("Unknown fixture source")

@@ -1,3 +1,5 @@
+# build_goal_features: For each match, compute basic stats for each team based on past matches: 
+# matches played, BTTS rate, avg goals scored. Also compute the target variables: BTTS (both teams to score) and OVER_2_5 (total goals >= 3).
 from pathlib import Path
 import pandas as pd
 
