@@ -1,6 +1,10 @@
-# Canonical 1X2 feature definitions used across training and prediction pipelines.
+# Canonical feature definitions used across training and prediction pipelines.
 
 FORM_WINDOW = 5
+
+# ---------------------------------------------------------------------------
+# 1X2 features (full-time result: home / draw / away)
+# ---------------------------------------------------------------------------
 
 # Bookmaker implied probabilities (margin-normalized)
 BOOKMAKER_FEATURES = [
@@ -71,19 +75,46 @@ FEATURE_COLS_1X2: list[str] = (
     + STRENGTH_FEATURES
 )
 
-# Keys returned by compute_team_stats, mapped to feature column prefixes
-HOME_OVERALL_STAT_KEYS = [
-    "matches_played",
-    "avg_gf",
-    "avg_ga",
-    "winrate",
-    "ppg",
-    "goal_diff",
-    "clean_sheet_rate",
-    "failed_to_score_rate",
+# ---------------------------------------------------------------------------
+# BTTS / Over-Under 2.5 features (goal-related)
+# ---------------------------------------------------------------------------
+
+# Rolling form per team, goal-only view. Reused for both BTTS and OU 2.5 so
+# the two models share a single source of truth.
+HOME_GOAL_FORM = [
+    "home_btts_rate",
+    "home_avg_goals",
+    "home_avg_goals_for",
+    "home_avg_goals_against",
+    "home_clean_sheet_rate",
+    "home_failed_to_score_rate",
+    "home_goal_diff",
+    "home_ppg",
+    "home_attack_strength",
+    "home_defense_strength",
+    "home_goals_last5",
+    "home_scored_rate_last5",
+    "home_goals_conceded_last5",
+    "home_conceded_rate_last5",
+    "home_goal_std",
 ]
 
-HOME_VENUE_STAT_KEYS = HOME_OVERALL_STAT_KEYS  # same structure, home_ prefix
+AWAY_GOAL_FORM = [
+    "away_btts_rate",
+    "away_avg_goals",
+    "away_avg_goals_for",
+    "away_avg_goals_against",
+    "away_clean_sheet_rate",
+    "away_failed_to_score_rate",
+    "away_goal_diff",
+    "away_ppg",
+    "away_attack_strength",
+    "away_defense_strength",
+    "away_goals_last5",
+    "away_scored_rate_last5",
+    "away_goals_conceded_last5",
+    "away_conceded_rate_last5",
+    "away_goal_std",
+]
 
-AWAY_OVERALL_STAT_KEYS = HOME_OVERALL_STAT_KEYS
-AWAY_VENUE_STAT_KEYS = HOME_OVERALL_STAT_KEYS
+FEATURE_COLS_BTTS_OU: list[str] = HOME_GOAL_FORM + AWAY_GOAL_FORM
