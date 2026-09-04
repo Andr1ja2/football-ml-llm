@@ -1,22 +1,39 @@
+# Unified live candidate pipeline for 1X2, BTTS, and OU 2.5 markets.
+
+from __future__ import annotations
+
+from live_odds import fetch_live_matches
 from live_predict_1x2 import fetch_candidates as fetch_1x2
+from live_predict_btts import fetch_candidates as fetch_btts
+from live_predict_ou25 import fetch_candidates as fetch_ou25
 
-def get_live_candidates():
 
-    candidates = []
+def _dedupe_candidates(candidates: list[dict]) -> list[dict]:
+    """Remove duplicate candidates for the same match/market/outcome."""
+    seen: set[tuple[str, str, str]] = set()
+    unique: list[dict] = []
 
-    # 1X2 candidates
-    one_x_two = fetch_1x2()
+    for c in candidates:
+        key = (c["match"], c["market"], c["outcome"])
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(c)
 
-    for c in one_x_two:
+    return unique
 
-        candidates.append({
-            "match": c["match"],
-            "market": "1X2",
-            "outcome": c["outcome"],
-            "model_prob": c["model_prob"],
-            "book_prob": c["book_prob"],
-            "edge": c.get("edge", 0),
-            "ev": c.get("ev", 0),
-        })
 
-    return candidates
+def get_live_candidates() -> list[dict]:
+    """
+    Fetch live odds once, run all three prediction pipelines, and return
+    a unified list of value candidates across 1X2, BTTS, and OU 2.5.
+    """
+    matches = fetch_live_matches()
+
+    candidates: list[dict] = []
+    candidates.extend(fetch_1x2(matches))
+    candidates.extend(fetch_btts(matches))
+    candidates.extend(fetch_ou25(matches))
+
+    candidates = _dedupe_candidates(candidates)
+    return sorted(candidates, key=lambda x: x.get("edge", 0), reverse=True)

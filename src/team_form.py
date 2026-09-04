@@ -167,3 +167,18 @@ def build_live_feature_dict(
     features["away_attack_strength"] = away_stats["attack_strength"]
     features["away_defense_strength"] = away_stats["defense_strength"]
     return features
+
+
+def build_live_goal_feature_dict(
+    home_stats: dict,
+    away_stats: dict,
+) -> dict[str, float | int]:
+    """Assemble a flat feature dict matching FEATURE_COLS_BTTS_OU column names."""
+    features: dict[str, float | int] = {}
+    features.update(stats_to_feature_values(home_stats, "home"))
+    features.update(stats_to_feature_values(away_stats, "away"))
+    features["home_attack_strength"] = home_stats["attack_strength"]
+    features["home_defense_strength"] = home_stats["defense_strength"]
+    features["away_attack_strength"] = away_stats["attack_strength"]
+    features["away_defense_strength"] = away_stats["defense_strength"]
+    return features
