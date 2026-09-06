@@ -14,6 +14,14 @@ from team_strength import _team_strength
 
 FUZZ_THRESHOLD = 90
 
+# Cache to avoid repeated computation of team stats within a single run.
+# Key: (team_name, window)
+_STATS_CACHE: dict[tuple[str, int], dict[str, float | int] | None] = {}
+
+# Cache for pre-computed histories to avoid repeated DataFrame scans.
+# Key: id(df)
+_HISTORY_CACHE: dict[int, dict] = {}
+
 
 def normalize_name(name: str) -> str:
     name = name.lower()
@@ -66,17 +74,45 @@ class TeamResolver:
         return None
 
 
+def _get_full_histories(df: pd.DataFrame) -> dict:
+    """Build full histories for all teams and leagues in a single pass."""
+    df_id = id(df)
+    if df_id in _HISTORY_CACHE:
+        return _HISTORY_CACHE[df_id]
+
+    league_hist: dict[str, list[tuple[int, tuple[int, int]]]] = defaultdict(list)
+    team_hist: dict[str, list[tuple[int, dict[str, int]]]] = defaultdict(list)
+
+    for i, row in enumerate(df.itertuples()):
+        league = str(row.league if hasattr(row, "league") else "UNKNOWN")
+        home = row.home_team
+        away = row.away_team
+        hg, ag = int(row.home_goals), int(row.away_goals)
+
+        league_hist[league].append((i, (hg, ag)))
+        team_hist[home].append((i, {"gf": hg, "ga": ag}))
+        team_hist[away].append((i, {"gf": ag, "ga": hg}))
+
+    histories = {"league_hist": league_hist, "team_hist": team_hist}
+    _HISTORY_CACHE[df_id] = histories
+    return histories
+
+
 def _build_team_history(df: pd.DataFrame, resolved: str) -> list[MatchRecord]:
+    histories = _get_full_histories(df)
+    team_matches = histories["team_hist"].get(resolved, [])
+
     history: list[MatchRecord] = []
-    for _, row in df.iterrows():
+    for i, match_data in team_matches:
+        # MatchRecord needs gf, ga, result, venue.
+        # We need to know if the team was home or away at index i.
+        row = df.iloc[i]
         if row["home_team"] == resolved:
-            gf, ga = int(row["home_goals"]), int(row["away_goals"])
+            gf, ga = match_data["gf"], match_data["ga"]
             venue = "home"
-        elif row["away_team"] == resolved:
-            gf, ga = int(row["away_goals"]), int(row["home_goals"])
-            venue = "away"
         else:
-            continue
+            gf, ga = match_data["gf"], match_data["ga"]
+            venue = "away"
 
         history.append(
             MatchRecord(gf=gf, ga=ga, result=result_from_goals(gf, ga), venue=venue)
@@ -90,26 +126,37 @@ def _compute_strength_for_team(
     window: int = FORM_WINDOW,
 ) -> tuple[float, float]:
     """Compute league-relative strength using all prior matches in the history dataframe."""
-    league_hist: dict[str, list[tuple[int, int]]] = defaultdict(list)
-    team_hist: dict[str, list[dict[str, int]]] = defaultdict(list)
+    histories = _get_full_histories(df)
+    team_matches = histories["team_hist"].get(resolved, [])
 
-    attack, defense = 1.0, 1.0
+    if not team_matches:
+        return 1.0, 1.0
 
-    for _, row in df.iterrows():
-        league = str(row.get("league", "UNKNOWN"))
-        home = row["home_team"]
-        away = row["away_team"]
-        hg = int(row["home_goals"])
-        ag = int(row["away_goals"])
+    # The original code calls _team_strength when it encounters the team.
+    # The final strength returned is from the LAST time the team played,
+    # computed using all matches in df that occurred BEFORE that last match.
+    last_idx, _ = team_matches[-1]
 
-        if home == resolved or away == resolved:
-            attack, defense = _team_strength(
-                resolved, league, team_hist, league_hist, window
-            )
+    # Identify league of the last match to get league history.
+    last_match_row = df.iloc[last_idx]
+    league = str(last_match_row.get("league", "UNKNOWN"))
 
-        league_hist[league].append((hg, ag))
-        team_hist[home].append({"gf": hg, "ga": ag})
-        team_hist[away].append({"gf": ag, "ga": hg})
+    # Build the histories as they would have been at the moment of the last match.
+    league_hist = [
+        match for idx, match in histories["league_hist"].get(league, [])
+        if idx < last_idx
+    ]
+
+    current_team_hist = {
+        resolved: [
+            match for idx, match in team_matches
+            if idx < last_idx
+        ]
+    }
+
+    attack, defense = _team_strength(
+        resolved, league, current_team_hist, {league: league_hist}, window
+    )
 
     return attack, defense
 
@@ -124,12 +171,18 @@ def compute_team_stats(
     Compute the same feature set used in training for a single team at prediction time.
     Returns a flat dict keyed by feature column names (home_* or away_* prefixes applied by caller).
     """
+    cache_key = (team_name, window)
+    if cache_key in _STATS_CACHE:
+        return _STATS_CACHE[cache_key]
+
     resolved = resolver.resolve(team_name)
     if resolved is None:
+        _STATS_CACHE[cache_key] = None
         return None
 
     history = _build_team_history(df, resolved)
     if not history:
+        _STATS_CACHE[cache_key] = None
         return None
 
     overall = compute_rolling_stats(history, window=window)
@@ -144,6 +197,7 @@ def compute_team_stats(
         "attack_strength": attack,
         "defense_strength": defense,
     }
+    _STATS_CACHE[cache_key] = stats
     return stats
 
 
