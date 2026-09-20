@@ -5,14 +5,14 @@ from combo_engine import MAX_LEGS, build_combos
 from live_candidates import get_live_candidates
 
 
-def main(requested_size: int, return_objects: bool = False):
+def main(requested_size: int, return_objects: bool = False, exclude_selections: list[dict] = None):
     was_capped = False
     if requested_size > MAX_LEGS:
         requested_size = MAX_LEGS
         was_capped = True
 
     candidates = get_live_candidates()
-    combos = build_combos(candidates, requested_size)
+    combos = build_combos(candidates, requested_size, exclude_selections=exclude_selections)
 
     if return_objects:
         return combos, was_capped

@@ -38,14 +38,29 @@ def combo_ev(prob: float, odds: float) -> float:
     return prob * odds - 1.0
 
 
-def build_combos(candidates: list[dict], requested_size: int) -> list[dict]:
+def build_combos(candidates: list[dict], requested_size: int, exclude_selections: list[dict] = None) -> list[dict]:
     combos: list[dict] = []
+
+    # Use a set for fast overlap checking
+    excluded_set = set()
+    if exclude_selections:
+        excluded_set = {(s["match"], s["outcome"]) for s in exclude_selections}
 
     for legs in itertools.combinations(candidates, requested_size):
         matches = [leg["match"] for leg in legs]
 
         # Prevent multiple selections from the same match
         if len(matches) != len(set(matches)):
+            continue
+
+        # Calculate overlap with previous ticket
+        overlap = 0
+        for leg in legs:
+            if (leg["match"], leg["outcome"]) in excluded_set:
+                overlap += 1
+
+        # Hard constraint: The new ticket MUST NOT be identical to the previous one
+        if exclude_selections and overlap == requested_size:
             continue
 
         prob = combo_probability(legs)
@@ -74,6 +89,18 @@ def build_combos(candidates: list[dict], requested_size: int) -> list[dict]:
             "combo_prob": round(prob, 4),
             "combo_odds": round(odds, 2),
             "expected_value": round(ev, 3),
+            "overlap": overlap, # Store overlap for sorting
         })
 
-    return sorted(combos, key=lambda x: x["expected_value"], reverse=True)
+    # Sorting Logic:
+    # If we have exclude_selections, we penalize overlap to encourage variation.
+    # If not, we just sort by EV.
+    if exclude_selections:
+        # Penalty factor: reducing EV by 0.1 per overlapping leg
+        # This pushes identical/near-identical tickets down the list
+        # unless the EV is massively higher than alternatives.
+        combos.sort(key=lambda x: x["expected_value"] - (x["overlap"] * 0.1), reverse=True)
+    else:
+        combos.sort(key=lambda x: x["expected_value"], reverse=True)
+
+    return combos

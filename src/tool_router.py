@@ -4,8 +4,11 @@ from run_combo_engine import main as generate_combos
 
 def run_tool(action, args=None):
     if action == "GENERATE_COMBOS":
+        if args is None:
+            args = {}
         size = args.get("size", 3)
-        combos, was_capped = generate_combos(size, return_objects=True)
+        exclude_selections = args.get("exclude_selections", None)
+        combos, was_capped = generate_combos(size, return_objects=True, exclude_selections=exclude_selections)
         return {
             "status": "ok",
             "combos": combos,
