@@ -1,0 +1,9 @@
+{
+    "MIN_EDGE_1X2_HOME": 0.06,
+    "MIN_EDGE_BTTS": 0.05,
+    "MIN_MODEL_PROB_BTTS": 0.45,
+    "MIN_EDGE_OU25": 0.05,
+    "MIN_MODEL_PROB_OU25": 0.45,
+    "MAX_LEGS": 5,
+    "ASSISTANT_NAME": "\ubaa8 Agent"
+}

@@ -31,10 +31,21 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         match_id INTEGER,
         bookie TEXT,
-	market TEXT, -- e.g. "1X2", "BTTS", "GG2+"
-	outcome TEXT, -- e.g. "home", "draw", "away"
+		market TEXT, -- e.g. "1X2", "BTTS", "GG2+"
+		outcome TEXT, -- e.g. "home", "draw", "away"
         odds REAL,
         FOREIGN KEY(match_id) REFERENCES matches(id)
+    );
+    """)
+
+    # Chat sessions table
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS chat_sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        history_json TEXT,
+        state_json TEXT
     );
     """)
 

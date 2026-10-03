@@ -1,8 +1,10 @@
 import json
+import datetime
 from llm_client import ask_model
 from tool_decider import decide_action
 from tool_router import run_tool
-from combo_engine import MAX_LEGS
+from database import get_connection
+from src.live_config import MAX_LEGS
 
 DEFAULT_SIZE = 3
 
@@ -13,8 +15,8 @@ GUIDELINES:
 1. Use ONLY the provided ticket data. Do NOT invent injuries, form, or tactical news.
 2. Interpret the Model vs Bookmaker disagreement:
    - Value is determined by the 'edge' (the difference between the model's predicted probability and the bookmaker's implied probability).
-   - A high model probability alone does not mean value if the odds are too low.
-   - A high odds selection alone does not mean value if the model probability is too low.
+   - A high model probability alone doesn't mean value if the odds are too low.
+   - A high odds selection alone doesn't mean value if the model probability is too low.
    - Value exists when the model's probability is significantly higher than the bookmaker's implied probability, resulting in a positive edge.
 3. Explain Expected Value (EV) correctly:
    - EV represents the expected return/profit according to the model and odds.
@@ -29,7 +31,7 @@ GUIDELINES:
    - Overall risk assessment based on the combination of legs.
 
 MARKET DEFINITIONS:
-- 1X2: HOME (Home win), DRAW, AWAY (Away win)
+- 1X2: HOME (Home win), DRAW (Draw), AWAY (Away win)
 - BTTS: YES (Both teams score), NO (At least one doesn't)
 - OU25: OVER (Total > 2.5 goals), UNDER (Total < 2.5 goals)
 """
@@ -48,18 +50,150 @@ class ChatManager:
         self.last_ticket_selections = None
         self.last_ticket_size = None
         self.last_ticket_obj = None
+        self.current_session_id = None
 
-    def process_message(self, user_input: str) -> str:
-        self.conversation.append(f"User: {user_input}")
-        convo_text = "\n".join(self.conversation)
+    def clear_session(self, create_new=True):
+        """Resets the state. Optionally registers a new session in the DB."""
+        if create_new:
+            conn = get_connection()
+            cur = conn.cursor()
+            cur.execute(
+                "INSERT INTO chat_sessions (title, history_json, state_json) VALUES (?, ?, ?)",
+                ("New Chat", json.dumps([]), json.dumps({}))
+            )
+            self.current_session_id = cur.lastrowid
+            conn.commit()
+            conn.close()
+        else:
+            self.current_session_id = None
+
+        self.conversation = []
+        self.last_ticket_selections = None
+        self.last_ticket_size = None
+        self.last_ticket_obj = None
+        return self.current_session_id
+
+    def load_session(self, session_id):
+        """Loads conversation and state from the database."""
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT history_json, state_json FROM chat_sessions WHERE id = ?", (session_id,))
+        row = cur.fetchone()
+        conn.close()
+
+        if row:
+            self.current_session_id = session_id
+            self.conversation = json.loads(row[0])
+            state = json.loads(row[1])
+            self.last_ticket_selections = state.get("last_ticket_selections")
+            self.last_ticket_size = state.get("last_ticket_size")
+            self.last_ticket_obj = state.get("last_ticket_obj")
+            return True
+        return False
+
+    def save_session(self, title=None, session_id=None):
+        """Saves the current conversation and state to the database."""
+        self._save_session_data(
+            self.conversation,
+            self.last_ticket_selections,
+            self.last_ticket_size,
+            self.last_ticket_obj,
+            session_id
+        )
+
+    def _save_session_data(self, history, selections, size, obj, session_id):
+        """Helper to save specific session data without affecting the current active session."""
+        history_json = json.dumps(history)
+        state_json = json.dumps({
+            "last_ticket_selections": selections,
+            "last_ticket_size": size,
+            "last_ticket_obj": obj
+        })
+
+        conn = get_connection()
+        cur = conn.cursor()
+
+        target_id = session_id if session_id is not None else self.current_session_id
+
+        if target_id:
+            # Determine title: if it's a "New Chat" and we now have history, name it after first message
+            title = None
+            if history and len(history) > 0:
+                # Check if current title is "New Chat"
+                cur.execute("SELECT title FROM chat_sessions WHERE id = ?", (target_id,))
+                row = cur.fetchone()
+                if row and row[0] == "New Chat":
+                    title = history[0].replace("User: ", "")[:50]
+
+            if title:
+                cur.execute(
+                    "UPDATE chat_sessions SET title = ?, history_json = ?, state_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                    (title, history_json, state_json, target_id)
+                )
+            else:
+                cur.execute(
+                    "UPDATE chat_sessions SET history_json = ?, state_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                    (history_json, state_json, target_id)
+                )
+        else:
+            # Create new session (fallback)
+            title = "New Chat"
+            if history:
+                title = history[0].replace("User: ", "")[:50]
+
+            cur.execute(
+                "INSERT INTO chat_sessions (title, history_json, state_json) VALUES (?, ?, ?)",
+                (title, history_json, state_json)
+            )
+            self.current_session_id = cur.lastrowid
+
+        conn.commit()
+        conn.close()
+
+    def process_message(self, user_input: str, session_id=None) -> str:
+        # IMPORTANT: Since process_message is called in a background thread,
+        # we must ensure a valid session_id exists.
+        if session_id is None:
+            # If no session_id was provided, create one now before processing.
+            # This handles the "New Chat" case where the user sends a message
+            # before a session was registered in the DB.
+            session_id = self.clear_session(create_new=True)
+            # IMPORTANT: Update the shared state so that the GUI's current_session_id
+            # matches the newly created one. Otherwise, on_chat_finished will reject
+            # the response because session_id != self.current_session_id.
+            self.current_session_id = session_id
+
+        # 1. Load the specific session data from the database
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT history_json, state_json FROM chat_sessions WHERE id = ?", (session_id,))
+        row = cur.fetchone()
+        conn.close()
+
+        if not row:
+            raise ValueError(f"Session {session_id} not found in database")
+
+        local_history = json.loads(row[0])
+        state = json.loads(row[1])
+        local_ticket_selections = state.get("last_ticket_selections")
+        local_ticket_size = state.get("last_ticket_size")
+        local_ticket_obj = state.get("last_ticket_obj")
+
+        # 2. Work with the local copy
+        local_history.append(f"User: {user_input}")
+
+        # Save the user message immediately to the database
+        self._save_session_data(local_history, local_ticket_selections, local_ticket_size, local_ticket_obj, session_id)
+
+        convo_text = "\n".join(local_history)
 
         decision = decide_action(user_input, convo_text)
 
         if decision["action"] == "CASUAL_CHAT":
             # Check if the user is asking to explain the last generated ticket
-            if self.last_ticket_selections and any(kw in user_input.lower() for kw in ["explain", "why", "how risky", "detailed", "meaning"]):
-                if self.last_ticket_obj:
-                    ticket = self.last_ticket_obj
+            if local_ticket_selections and any(kw in user_input.lower() for kw in ["explain", "why", "how risky", "detailed", "meaning"]):
+                if local_ticket_obj:
+                    ticket = local_ticket_obj
                     explain_prompt = f"""
                     {SYSTEM_ANALYTICAL_EXPLAIN_PROMPT}
 
@@ -73,21 +207,22 @@ class ChatManager:
                     Provide a detailed analytical interpretation of this ticket, focusing on the value candidates and the overall risk/reward tradeoff.
                     """
                     response = ask_model(explain_prompt)
-                    self.conversation.append(f"Assistant: {response.strip()}")
+                    local_history.append(f"Assistant: {response.strip()}")
+                    self._save_session_data(local_history, local_ticket_selections, local_ticket_size, local_ticket_obj, session_id)
                     return response.strip()
 
             response = ask_model(
                 f"{CASUAL_CHAT_PROMPT}\n\nConversation History:\n{convo_text}\n\nAnswer:"
             )
-            self.conversation.append(f"Assistant: {response.strip()}")
+            local_history.append(f"Assistant: {response.strip()}")
+            self._save_session_data(local_history, local_ticket_selections, local_ticket_size, local_ticket_obj, session_id)
             return response.strip()
 
         # Handle Tool Parameters
         requested_size = decision["params"]["size"] if decision["params"] and "size" in decision["params"] else None
 
-        # Context-aware size inference for "add one more" etc.
-        if requested_size is None and self.last_ticket_size is not None:
-            requested_size = self.last_ticket_size
+        if requested_size is None and local_ticket_size is not None:
+            requested_size = local_ticket_size
 
         if requested_size is None:
             requested_size = DEFAULT_SIZE
@@ -97,10 +232,9 @@ class ChatManager:
             requested_size = MAX_LEGS
             was_capped = True
 
-        # Handle "give me another one" / uniqueness
         exclude_selections = None
         if any(kw in user_input.lower() for kw in ["different", "another"]):
-            exclude_selections = self.last_ticket_selections
+            exclude_selections = local_ticket_selections
         elif any(kw in user_input.lower() for kw in ["one more", "add"]):
             exclude_selections = None
 
@@ -111,7 +245,8 @@ class ChatManager:
 
         if tool_result.get("status") != "ok" or not tool_result.get("combos"):
             msg = "I don't have enough data to generate a different betting ticket right now."
-            self.conversation.append(f"Assistant: {msg}")
+            local_history.append(f"Assistant: {msg}")
+            self._save_session_data(local_history, local_ticket_selections, local_ticket_size, local_ticket_obj, session_id)
             return msg
 
         prefix = ""
@@ -120,15 +255,14 @@ class ChatManager:
 
         ticket = tool_result["combos"][0]
 
-        # Update history for conversational awareness
-        self.last_ticket_obj = ticket
-        self.last_ticket_selections = [
+        # Local updates for the ticket state
+        updated_selections = [
             {"match": leg["match"], "outcome": leg["outcome"]}
             for leg in ticket["legs"]
         ]
-        self.last_ticket_size = ticket["n_legs"]
+        updated_size = ticket["n_legs"]
+        updated_obj = ticket
 
-        # TIERED EXPLANATIONS
         is_detailed_request = any(kw in user_input.lower() for kw in ["explain", "why", "how risky", "detailed", "meaning"])
 
         if is_detailed_request:
@@ -161,5 +295,8 @@ class ChatManager:
 
         response = ask_model(explain_prompt)
         full_response = f"{prefix}{response.strip()}"
-        self.conversation.append(f"Assistant: {full_response}")
+        local_history.append(f"Assistant: {full_response}")
+
+        # Save final state for this specific session
+        self._save_session_data(local_history, updated_selections, updated_size, updated_obj, session_id)
         return full_response

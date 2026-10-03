@@ -24,15 +24,23 @@ class MessageTextEdit(QTextEdit):
         QTimer.singleShot(0, self.update_height)
 
     def update_height(self):
-        document_height = self.document().documentLayout().documentSize().height()
-        margins = self.contentsMargins()
+        # Guard against race conditions where this timer fires after the widget is destroyed
+        if not self.document() or not self.document().documentLayout():
+            return
 
-        self.setFixedHeight(
-            int(document_height)
-            + margins.top()
-            + margins.bottom()
-            + 8
-        )
+        try:
+            document_height = self.document().documentLayout().documentSize().height()
+            margins = self.contentsMargins()
+
+            self.setFixedHeight(
+                int(document_height)
+                + margins.top()
+                + margins.bottom()
+                + 8
+            )
+        except (AttributeError, RuntimeError):
+            # Catch cases where C++ objects are deleted while the Python call is in progress
+            pass
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
