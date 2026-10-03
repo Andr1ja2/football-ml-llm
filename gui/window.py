@@ -36,7 +36,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("Football Chat Application")
+        self.setWindowTitle("BetAssist")
         self.resize(1100, 700)
         self.is_processing = False
 
@@ -75,7 +75,10 @@ class MainWindow(QMainWindow):
 
         # Middle: Chat Area
         self.chat_container = QWidget()
+        self.chat_container.setObjectName("chatContainer")
         chat_layout = QVBoxLayout(self.chat_container)
+        chat_layout.setContentsMargins(0, 0, 0, 0)
+        chat_layout.setSpacing(0)
 
         self.message_area = MessageArea()
         self.text_area = TextArea()
@@ -88,7 +91,9 @@ class MainWindow(QMainWindow):
 
         # Right: Ticket Bar
         self.ticket_container = QWidget()
+        self.ticket_container.setObjectName("ticketContainer")
         ticket_layout = QVBoxLayout(self.ticket_container)
+        ticket_layout.setContentsMargins(0, 0, 0, 0)
         self.ticket_area = TicketArea()
         ticket_layout.addWidget(self.ticket_area)
 
@@ -100,11 +105,12 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(self.splitter)
 
         # Collapse buttons
-        self.ticket_collapse_btn = QPushButton("🗐", main_container)
-        self.ticket_collapse_btn.setFixedSize(35, 35)
+        self.ticket_collapse_btn = QPushButton("◧", main_container)
+        self.ticket_collapse_btn.setObjectName("ticketCollapseBtn")
+        self.ticket_collapse_btn.setFixedSize(36, 36)
         self.ticket_collapse_btn.clicked.connect(self.toggle_ticket_area)
-        self.ticket_collapse_btn.setStyleSheet("background-color: rgba(40, 40, 40, 0.5); color: white;")
         self.ticket_collapse_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.ticket_collapse_btn.setToolTip("Show / hide ticket panel")
 
         self.update_button_positions()
         self.refresh_sidebar()
@@ -121,10 +127,6 @@ class MainWindow(QMainWindow):
     def toggle_ticket_area(self):
         visible = self.ticket_container.isVisible()
         self.ticket_container.setVisible(not visible)
-        if visible:
-            self.message_area.layout.setContentsMargins(0, 0, 45, 0)
-        else:
-            self.message_area.layout.setContentsMargins(0, 0, 0, 0)
 
     def toggle_sidebar(self):
         # This is now handled by Sidebar.toggle_compact, but we can call it from here if needed
@@ -192,11 +194,7 @@ class MainWindow(QMainWindow):
             # Using deleteLater() is correct, but we should ensure we are not doing this
             # in a way that clashes with rapid state changes.
 
-            # Clear messages
-            while self.message_area.layout.count() > 0:
-                item = self.message_area.layout.takeAt(0)
-                if item and item.widget():
-                    item.widget().deleteLater()
+            self.message_area.clear_messages()
 
             # Repopulate messages
             for msg in self.chat_manager.conversation:
@@ -208,12 +206,7 @@ class MainWindow(QMainWindow):
         # Do not create a new DB session immediately when clicking "New Chat".
         # Only reset the local state.
         self.chat_manager.clear_session(create_new=False)
-        # Clear UI
-        while self.message_area.layout.count() > 0:
-            item = self.message_area.layout.takeAt(0)
-            if item and item.widget():
-                item.widget().deleteLater()
-
+        self.message_area.clear_messages()
         self.refresh_sidebar()
 
     def handle_settings_requested(self):
@@ -236,11 +229,7 @@ class MainWindow(QMainWindow):
         if self.chat_manager.current_session_id == session_id:
             # Reset state without creating a new DB entry
             self.chat_manager.clear_session(create_new=False)
-            # Clear UI
-            while self.message_area.layout.count() > 0:
-                item = self.message_area.layout.takeAt(0)
-                if item and item.widget():
-                    item.widget().deleteLater()
+            self.message_area.clear_messages()
 
         self.refresh_sidebar()
 

@@ -1,4 +1,6 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QListWidget, QListWidgetItem, QSizePolicy
+from PySide6.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QListWidget, QListWidgetItem, QLabel,
+)
 from PySide6.QtCore import Signal, Qt
 
 class Sidebar(QWidget):
@@ -9,73 +11,61 @@ class Sidebar(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setObjectName("sidebar")
         self.is_compact = False
         self.setFixedWidth(250)
 
-        self.setStyleSheet("""
-            QWidget {
-                background-color: #252526;
-                color: #cccccc;
-                border-right: 1px solid #333333;
-            }
-            QPushButton {
-                background-color: #3c3c3c;
-                border: none;
-                padding: 8px;
-                border-radius: 4px;
-                text-align: center;
-            }
-            QPushButton:hover {
-                background-color: #4c4c4c;
-            }
-            QListWidget {
-                background-color: transparent;
-                border: none;
-                outline: none;
-            }
-            QListWidget::item {
-                padding: 10px;
-                border-radius: 4px;
-                margin-bottom: 2px;
-            }
-            QListWidget::item:selected {
-                background-color: #37373d;
-                color: white;
-            }
-            QListWidget {
-                border: none;
-            }
-        """)
-
         self.layout = QVBoxLayout(self)
-        self.layout.setContentsMargins(10, 10, 10, 10)
-        self.layout.setSpacing(10)
+        self.layout.setContentsMargins(14, 16, 14, 16)
+        self.layout.setSpacing(12)
+
+        self.brand_block = QWidget()
+        brand_layout = QVBoxLayout(self.brand_block)
+        brand_layout.setContentsMargins(4, 0, 0, 4)
+        brand_layout.setSpacing(2)
+
+        self.brand_title = QLabel("BetAssist")
+        self.brand_title.setObjectName("sidebarBrand")
+        self.brand_tagline = QLabel("Betting analyst")
+        self.brand_tagline.setObjectName("sidebarTagline")
+        brand_layout.addWidget(self.brand_title)
+        brand_layout.addWidget(self.brand_tagline)
 
         # Top Header Area
         self.header_layout = QVBoxLayout()
 
         # Define buttons
         self.new_chat_btn = QPushButton("+ New Chat")
+        self.new_chat_btn.setObjectName("sidebarNewChat")
+        self.new_chat_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.new_chat_btn.clicked.connect(lambda: self.new_chat_requested.emit())
 
-        self.collapse_btn = QPushButton("⬅")
-        self.collapse_btn.setFixedSize(30, 30)
+        self.collapse_btn = QPushButton("‹")
+        self.collapse_btn.setObjectName("sidebarIconBtn")
+        self.collapse_btn.setFixedSize(34, 34)
+        self.collapse_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.collapse_btn.clicked.connect(self.toggle_compact)
 
-        self.settings_btn = QPushButton("⚙ Settings")
+        self.settings_btn = QPushButton("Settings")
+        self.settings_btn.setObjectName("sidebarSettings")
+        self.settings_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.settings_btn.clicked.connect(lambda: self.settings_requested.emit())
 
-        # Initial layout state
+        self.history_label = QLabel("RECENT")
+        self.history_label.setObjectName("sidebarSectionLabel")
+
         self.history_list = QListWidget()
+        self.history_list.setObjectName("historyList")
         self.history_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.history_list.setFixedWidth(230) # Default expanded width minus margins
+        self.history_list.setFixedWidth(222)
         self.history_list.itemClicked.connect(self.on_item_clicked)
 
         self.set_compact_state()
+        self.layout.addWidget(self.brand_block)
         self.layout.addLayout(self.header_layout)
-        self.layout.addWidget(self.history_list)
+        self.layout.addWidget(self.history_label)
+        self.layout.addWidget(self.history_list, 1)
 
-        # Bottom: Settings Button
         self.layout.addWidget(self.settings_btn)
 
     def toggle_compact(self):
@@ -101,40 +91,47 @@ class Sidebar(QWidget):
                         layout_item.widget().setParent(None)
 
         if self.is_compact:
-            self.setFixedWidth(50)
+            self.setFixedWidth(56)
+            self.brand_block.setVisible(False)
+            self.history_label.setVisible(False)
             self.new_chat_btn.setText("+")
             self.settings_btn.setText("⚙")
-            self.collapse_btn.setText("➡")
+            self.collapse_btn.setText("›")
 
-            # Fixed sizes for compact mode to ensure buttons are perfectly square
-            self.new_chat_btn.setFixedSize(30, 30)
-            self.collapse_btn.setFixedSize(30, 30)
-            self.settings_btn.setFixedSize(30, 30)
+            self.new_chat_btn.setFixedSize(34, 34)
+            self.collapse_btn.setFixedSize(34, 34)
+            self.settings_btn.setFixedSize(34, 34)
+            self.new_chat_btn.setObjectName("sidebarIconBtn")
+            self.settings_btn.setObjectName("sidebarIconBtn")
 
-            # Stacked vertically: Collapse on top, then New Chat
             self.header_layout.addWidget(self.collapse_btn)
             self.header_layout.addWidget(self.new_chat_btn)
-            self.history_list.setFixedWidth(30)
+            self.history_list.setFixedWidth(28)
         else:
             self.setFixedWidth(250)
+            self.brand_block.setVisible(True)
+            self.history_label.setVisible(True)
             self.new_chat_btn.setText("+ New Chat")
             self.settings_btn.setText("⚙ Settings")
-            self.collapse_btn.setText("⬅")
+            self.collapse_btn.setText("‹")
 
-            # Reset sizes for expanded mode so the New Chat button can grow
-            self.new_chat_btn.setMinimumWidth(0)
-            self.new_chat_btn.setMaximumWidth(16777215)
-            self.collapse_btn.setFixedSize(30, 30)
-            self.settings_btn.setMinimumWidth(0)
-            self.settings_btn.setMaximumWidth(16777215)
+            self.new_chat_btn.setObjectName("sidebarNewChat")
+            self.settings_btn.setObjectName("sidebarSettings")
+
+            self.new_chat_btn.setMinimumSize(0, 0)
+            self.new_chat_btn.setMaximumSize(16777215, 16777215)
+            self.collapse_btn.setFixedSize(34, 34)
+            self.settings_btn.setMinimumSize(0, 0)
+            self.settings_btn.setMaximumSize(16777215, 16777215)
 
             # Row layout: [New Chat (Expanding)] [Stretch] [Collapse (Fixed)]
             top_row = QHBoxLayout()
+            top_row.setSpacing(8)
             top_row.addWidget(self.new_chat_btn)
             top_row.addStretch()
             top_row.addWidget(self.collapse_btn)
             self.header_layout.addLayout(top_row)
-            self.history_list.setFixedWidth(230)
+            self.history_list.setFixedWidth(222)
 
         self.refresh_history_display()
 
@@ -190,6 +187,8 @@ class Sidebar(QWidget):
             item.setData(Qt.ItemDataRole.UserRole, session_id)
             if self.is_compact:
                 item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                if session_id == active_id:
+                    item.setForeground(Qt.GlobalColor.green)
 
             # Highlight the currently active session
             row = self.history_list.count()
@@ -202,4 +201,3 @@ class Sidebar(QWidget):
 
         # Ensure the selection is visually updated
         self.history_list.update()
-

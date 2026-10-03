@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt, QTimer
 class MessageTextEdit(QTextEdit):
     def __init__(self, text="", parent=None):
         super().__init__(parent)
+        self.setObjectName("messageBody")
 
         self.setPlainText(text)
         self.setReadOnly(True)
@@ -48,22 +49,27 @@ class MessageTextEdit(QTextEdit):
 
 
 class Message(QFrame):
-    def __init__(self, user, text, parent=None):
+    def __init__(self, user, text, sender="User", parent=None):
         super().__init__(parent)
 
-        self.setFrameShape(QFrame.Shape.Box)
+        is_user = sender == "User"
+        self.setObjectName("messageUser" if is_user else "messageAssistant")
+        self.setFrameShape(QFrame.Shape.NoFrame)
         self.setSizePolicy(
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Maximum
         )
 
         self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(14, 10, 14, 12)
+        self.layout.setSpacing(6)
         self.layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         self.user = QLabel(user)
+        self.user.setObjectName("messageRoleUser" if is_user else "messageRoleAssistant")
 
         font = QFont()
-        font.setPointSize(12)
+        font.setPointSize(10)
         font.setBold(True)
         self.user.setFont(font)
 
