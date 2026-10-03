@@ -21,9 +21,9 @@ class ChatWorker(QObject):
     def process(self, data):
         text, session_id = data
         try:
-            response = self.chat_manager.process_message(text, session_id=session_id)
+            response, ticket = self.chat_manager.process_message(text, session_id=session_id)
             resolved_id = session_id if session_id is not None else self.chat_manager.current_session_id
-            self.finished.emit((response, resolved_id))
+            self.finished.emit((response, resolved_id, ticket))
         except Exception as e:
             resolved_id = session_id if session_id is not None else self.chat_manager.current_session_id
             self.error.emit((str(e), resolved_id))
@@ -154,7 +154,7 @@ class MainWindow(QMainWindow):
 
     @Slot(tuple)
     def on_chat_finished(self, data):
-        response, session_id = data
+        response, session_id, ticket = data
         # Only append the response to the GUI if the session that requested it is still active
         # Handle the case where current_session_id might have been updated by the worker
         if session_id == self.chat_manager.current_session_id:
@@ -166,6 +166,10 @@ class MainWindow(QMainWindow):
             # 3. Re-enable the send button
             self.text_area.set_enabled(True)
             self.refresh_sidebar()
+
+            # 4. Add ticket to Ticket Area if one was generated
+            if ticket:
+                self.ticket_area.add_ticket(ticket)
         else:
             # The user has switched chats. We don't show the message here,
             # but it is already saved in the database by the ChatManager.
@@ -202,11 +206,15 @@ class MainWindow(QMainWindow):
                 text = msg.split(": ", 1)[1]
                 self.message_area.add_message(text, sender=sender)
 
+            # Sync tickets for the loaded session
+            self.ticket_area.load_tickets(self.chat_manager.session_tickets)
+
     def handle_new_chat(self):
         # Do not create a new DB session immediately when clicking "New Chat".
         # Only reset the local state.
         self.chat_manager.clear_session(create_new=False)
         self.message_area.clear_messages()
+        self.ticket_area.clear_tickets()
         self.refresh_sidebar()
 
     def handle_settings_requested(self):

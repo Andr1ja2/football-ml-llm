@@ -47,9 +47,7 @@ Respond naturally and briefly.
 class ChatManager:
     def __init__(self):
         self.conversation = []
-        self.last_ticket_selections = None
-        self.last_ticket_size = None
-        self.last_ticket_obj = None
+        self.session_tickets = []
         self.current_session_id = None
 
     def clear_session(self, create_new=True):
@@ -58,8 +56,8 @@ class ChatManager:
             conn = get_connection()
             cur = conn.cursor()
             cur.execute(
-                "INSERT INTO chat_sessions (title, history_json, state_json) VALUES (?, ?, ?)",
-                ("New Chat", json.dumps([]), json.dumps({}))
+                "INSERT INTO chat_sessions (title, history_json) VALUES (?, ?)",
+                ("New Chat", json.dumps([]))
             )
             self.current_session_id = cur.lastrowid
             conn.commit()
@@ -68,47 +66,45 @@ class ChatManager:
             self.current_session_id = None
 
         self.conversation = []
-        self.last_ticket_selections = None
-        self.last_ticket_size = None
-        self.last_ticket_obj = None
+        self.session_tickets = []
         return self.current_session_id
 
     def load_session(self, session_id):
-        """Loads conversation and state from the database."""
+        """Loads conversation and tickets from the database."""
+        print(f"DEBUG: Loading session {session_id}")
         conn = get_connection()
         cur = conn.cursor()
+
+        # Load tickets for this session
+        cur.execute("SELECT ticket_json FROM tickets WHERE session_id = ? ORDER BY created_at ASC", (session_id,))
+        ticket_rows = cur.fetchall()
+        print(f"DEBUG: Found {len(ticket_rows)} tickets for session {session_id}")
+        self.session_tickets = [json.loads(r[0]) for r in ticket_rows]
+
+        # Load conversation
         cur.execute("SELECT history_json, state_json FROM chat_sessions WHERE id = ?", (session_id,))
         row = cur.fetchone()
         conn.close()
 
         if row:
+            print(f"DEBUG: Session {session_id} found in chat_sessions table")
             self.current_session_id = session_id
             self.conversation = json.loads(row[0])
-            state = json.loads(row[1])
-            self.last_ticket_selections = state.get("last_ticket_selections")
-            self.last_ticket_size = state.get("last_ticket_size")
-            self.last_ticket_obj = state.get("last_ticket_obj")
             return True
+
+        print(f"DEBUG: Session {session_id} NOT found in chat_sessions table")
         return False
 
     def save_session(self, title=None, session_id=None):
         """Saves the current conversation and state to the database."""
         self._save_session_data(
             self.conversation,
-            self.last_ticket_selections,
-            self.last_ticket_size,
-            self.last_ticket_obj,
             session_id
         )
 
-    def _save_session_data(self, history, selections, size, obj, session_id):
-        """Helper to save specific session data without affecting the current active session."""
+    def _save_session_data(self, history, session_id):
+        """Helper to save session data without affecting the current active session."""
         history_json = json.dumps(history)
-        state_json = json.dumps({
-            "last_ticket_selections": selections,
-            "last_ticket_size": size,
-            "last_ticket_obj": obj
-        })
 
         conn = get_connection()
         cur = conn.cursor()
@@ -127,13 +123,13 @@ class ChatManager:
 
             if title:
                 cur.execute(
-                    "UPDATE chat_sessions SET title = ?, history_json = ?, state_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-                    (title, history_json, state_json, target_id)
+                    "UPDATE chat_sessions SET title = ?, history_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                    (title, history_json, target_id)
                 )
             else:
                 cur.execute(
-                    "UPDATE chat_sessions SET history_json = ?, state_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-                    (history_json, state_json, target_id)
+                    "UPDATE chat_sessions SET history_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                    (history_json, target_id)
                 )
         else:
             # Create new session (fallback)
@@ -142,15 +138,15 @@ class ChatManager:
                 title = history[0].replace("User: ", "")[:50]
 
             cur.execute(
-                "INSERT INTO chat_sessions (title, history_json, state_json) VALUES (?, ?, ?)",
-                (title, history_json, state_json)
+                "INSERT INTO chat_sessions (title, history_json) VALUES (?, ?)",
+                (title, history_json)
             )
             self.current_session_id = cur.lastrowid
 
         conn.commit()
         conn.close()
 
-    def process_message(self, user_input: str, session_id=None) -> str:
+    def process_message(self, user_input: str, session_id=None) -> tuple[str, dict | None]:
         # IMPORTANT: Since process_message is called in a background thread,
         # we must ensure a valid session_id exists.
         if session_id is None:
@@ -163,6 +159,8 @@ class ChatManager:
             # the response because session_id != self.current_session_id.
             self.current_session_id = session_id
 
+
+
         # 1. Load the specific session data from the database
         conn = get_connection()
         cur = conn.cursor()
@@ -174,7 +172,11 @@ class ChatManager:
             raise ValueError(f"Session {session_id} not found in database")
 
         local_history = json.loads(row[0])
-        state = json.loads(row[1])
+
+        # state_json can be None if the session was just created
+        state_raw = row[1]
+        state = json.loads(state_raw) if state_raw else {}
+
         local_ticket_selections = state.get("last_ticket_selections")
         local_ticket_size = state.get("last_ticket_size")
         local_ticket_obj = state.get("last_ticket_obj")
@@ -183,7 +185,7 @@ class ChatManager:
         local_history.append(f"User: {user_input}")
 
         # Save the user message immediately to the database
-        self._save_session_data(local_history, local_ticket_selections, local_ticket_size, local_ticket_obj, session_id)
+        self._save_session_data(local_history, session_id)
 
         convo_text = "\n".join(local_history)
 
@@ -208,15 +210,15 @@ class ChatManager:
                     """
                     response = ask_model(explain_prompt)
                     local_history.append(f"Assistant: {response.strip()}")
-                    self._save_session_data(local_history, local_ticket_selections, local_ticket_size, local_ticket_obj, session_id)
-                    return response.strip()
+                    self._save_session_data(local_history, session_id)
+                    return response.strip(), None
 
             response = ask_model(
                 f"{CASUAL_CHAT_PROMPT}\n\nConversation History:\n{convo_text}\n\nAnswer:"
             )
             local_history.append(f"Assistant: {response.strip()}")
-            self._save_session_data(local_history, local_ticket_selections, local_ticket_size, local_ticket_obj, session_id)
-            return response.strip()
+            self._save_session_data(local_history, session_id)
+            return response.strip(), None
 
         # Handle Tool Parameters
         requested_size = decision["params"]["size"] if decision["params"] and "size" in decision["params"] else None
@@ -246,8 +248,8 @@ class ChatManager:
         if tool_result.get("status") != "ok" or not tool_result.get("combos"):
             msg = "I don't have enough data to generate a different betting ticket right now."
             local_history.append(f"Assistant: {msg}")
-            self._save_session_data(local_history, local_ticket_selections, local_ticket_size, local_ticket_obj, session_id)
-            return msg
+            self._save_session_data(local_history, session_id)
+            return msg, None
 
         prefix = ""
         if was_capped:
@@ -297,6 +299,19 @@ class ChatManager:
         full_response = f"{prefix}{response.strip()}"
         local_history.append(f"Assistant: {full_response}")
 
+        # Save the ticket to the database
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO tickets (session_id, ticket_json) VALUES (?, ?)",
+            (session_id, json.dumps(ticket))
+        )
+        conn.commit()
+        conn.close()
+
+        # Update local state
+        self.session_tickets.append(ticket)
+
         # Save final state for this specific session
-        self._save_session_data(local_history, updated_selections, updated_size, updated_obj, session_id)
-        return full_response
+        self._save_session_data(local_history, session_id)
+        return full_response, ticket

@@ -28,16 +28,13 @@ class TextArea(QFrame):
         self.textBox = TextBox()
         self.textBox.setObjectName("composerInput")
         self.textBox.setMinimumHeight(60)
-        self.textBox.setMaximumHeight(90)
         self.textBox.setPlaceholderText("Message the analyst…  (Enter to send, Shift+Enter for new line)")
 
         self.sendButton = QPushButton("➤ Send")
         self.sendButton.setObjectName("composerSend")
-        self.sendButton.setMinimumHeight(60)
-        self.sendButton.setMaximumHeight(90)
         self.sendButton.setSizePolicy(
             QSizePolicy.Policy.Fixed,
-            QSizePolicy.Policy.Expanding
+            QSizePolicy.Policy.Preferred
         )
         self.sendButton.clicked.connect(self.send_message)
         self.textBox.enter_pressed.connect(self.send_message)

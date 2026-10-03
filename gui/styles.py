@@ -287,12 +287,38 @@ def app_stylesheet() -> str:
         background-color: transparent;
         border: none;
     }}
+    QFrame#ticketReceipt {{
+        background-color: {BG_SURFACE};
+        border: 1px solid {BORDER};
+        border-radius: {RADIUS_MD};
+    }}
+    QLabel#ticketReceiptHeader {{
+        color: {ACCENT};
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+    }}
+    QLabel#ticketLegMatch {{
+        color: {TEXT_SECONDARY};
+        font-size: 12px;
+    }}
+    QLabel#ticketLegOutcome {{
+        color: {TEXT_PRIMARY};
+        font-size: 12px;
+        font-weight: 600;
+    }}
+    QLabel#ticketReceiptFooter {{
+        color: {TEXT_MUTED};
+        font-size: 11px;
+        font-weight: 600;
+    }}
     QLabel#ticketPanelTitle {{
         color: {TEXT_PRIMARY};
         font-size: 13px;
         font-weight: 700;
         letter-spacing: 0.06em;
     }}
+
     QLabel#ticketPanelSubtitle {{
         color: {TEXT_MUTED};
         font-size: 11px;

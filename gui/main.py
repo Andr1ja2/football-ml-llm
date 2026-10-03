@@ -10,11 +10,14 @@ sys.path.append(os.path.join(root_dir, 'src'))
 
 from window import MainWindow
 from styles import apply_app_style
-
+from database import init_db
 
 app = QApplication(sys.argv)
 app.setApplicationName("BetAssist")
 app.setApplicationDisplayName("BetAssist")
+
+# Initialize database tables
+init_db()
 
 font = QFont()
 font.setFamilies(["Segoe UI", "SF Pro Text", "Ubuntu", "Cantarell", "sans-serif"])

@@ -49,5 +49,16 @@ def init_db():
     );
     """)
 
+    # Tickets table
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS tickets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id INTEGER,
+        ticket_json TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(session_id) REFERENCES chat_sessions(id)
+    );
+    """)
+
     conn.commit()
     conn.close()
