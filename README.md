@@ -152,7 +152,9 @@ data/processed/
 
 Start the system:
 
-python src/chat_cli.py
+python src/chat_cli.py -> Command Line Chat Client
+
+python gui/main.py -> GUI Chat Application
 
 Example interactions:
 
