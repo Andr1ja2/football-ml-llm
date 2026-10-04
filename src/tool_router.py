@@ -8,12 +8,15 @@ def run_tool(action, args=None):
             args = {}
         size = args.get("size", 3)
         exclude_selections = args.get("exclude_selections", None)
-        combos, was_capped = generate_combos(size, return_objects=True, exclude_selections=exclude_selections)
+        combos, was_capped, odds_error = generate_combos(
+            size, return_objects=True, exclude_selections=exclude_selections
+        )
         return {
-            "status": "ok",
+            "status": "ok" if combos else "no_data",
             "combos": combos,
             "was_capped": was_capped,
-            "size": min(size, 5)
+            "size": min(size, 5),
+            "odds_error": odds_error,
         }
 
     return {"status": "error"}

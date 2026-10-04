@@ -13,6 +13,7 @@ DEFAULT_SETTINGS = {
     "MAX_LEGS": 5,
     "ASSISTANT_NAME": "모 Agent",
     "LLM_MODEL": "",
+    "ODDS_API_KEY": "",
 }
 
 class SettingsManager:

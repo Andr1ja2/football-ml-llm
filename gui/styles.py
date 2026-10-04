@@ -371,6 +371,17 @@ def app_stylesheet() -> str:
     QComboBox#llmModelCombo:disabled {{
         color: {TEXT_MUTED};
     }}
+    QLineEdit#oddsApiKeyInput {{
+        background-color: {BG_INPUT};
+        color: {TEXT_PRIMARY};
+        border: 1px solid {BORDER};
+        border-radius: {RADIUS_SM};
+        padding: 6px 10px;
+        min-height: 28px;
+    }}
+    QLineEdit#oddsApiKeyInput:focus {{
+        border-color: {BORDER_FOCUS};
+    }}
     QPushButton#settingsRefreshModels {{
         min-height: 28px;
         padding: 6px 12px;

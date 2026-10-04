@@ -241,8 +241,11 @@ class ChatManager:
             args={"size": requested_size, "exclude_selections": exclude_selections}
         )
 
-        if tool_result.get("status") != "ok" or not tool_result.get("combos"):
-            msg = "I don't have enough data to generate a different betting ticket right now."
+        if not tool_result.get("combos"):
+            msg = tool_result.get("odds_error") or (
+                "I don't have enough data to generate a betting ticket right now. "
+                "Live odds may be unavailable or no selections met the model thresholds."
+            )
             local_history.append(f"Assistant: {msg}")
             self._save_session_data(local_history, session_id)
             return msg, None

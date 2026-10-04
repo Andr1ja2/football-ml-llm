@@ -3,6 +3,7 @@
 
 from combo_engine import MAX_LEGS, build_combos
 from live_candidates import get_live_candidates
+from live_odds import get_odds_fetch_error
 
 
 def main(requested_size: int, return_objects: bool = False, exclude_selections: list[dict] = None):
@@ -12,10 +13,11 @@ def main(requested_size: int, return_objects: bool = False, exclude_selections: 
         was_capped = True
 
     candidates = get_live_candidates()
+    odds_error = get_odds_fetch_error()
     combos = build_combos(candidates, requested_size, exclude_selections=exclude_selections)
 
     if return_objects:
-        return combos, was_capped
+        return combos, was_capped, odds_error
 
     print(f"\nCollected {len(candidates)} live candidates "
           f"({sum(1 for c in candidates if c['market'] == '1X2')} 1X2, "

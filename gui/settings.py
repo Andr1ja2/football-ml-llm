@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (
     QDialog, QFormLayout, QDoubleSpinBox, QSpinBox, QPushButton,
-    QVBoxLayout, QHBoxLayout, QLabel, QWidget, QComboBox,
+    QVBoxLayout, QHBoxLayout, QLabel, QWidget, QComboBox, QLineEdit,
 )
 from PySide6.QtCore import Qt
 from src.live_config import settings_manager, DEFAULT_SETTINGS
@@ -11,7 +11,7 @@ class SettingsWindow(QDialog):
         super().__init__(parent)
         self.setObjectName("settingsDialog")
         self.setWindowTitle("Settings")
-        self.setFixedSize(440, 520)
+        self.setFixedSize(440, 780)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(28, 24, 28, 24)
@@ -25,7 +25,7 @@ class SettingsWindow(QDialog):
         title = QLabel("Settings")
         title.setObjectName("settingsTitle")
         subtitle = QLabel(
-            "Choose a local Ollama model and tune edge and probability cutoffs "
+            "Connect Ollama, TheOddsAPI, and tune edge and probability cutoffs "
             "used when building tickets."
         )
         subtitle.setObjectName("settingsSubtitle")
@@ -61,6 +61,32 @@ class SettingsWindow(QDialog):
         llm_form.addRow("", self.llm_status_label)
 
         layout.addLayout(llm_form)
+
+        odds_header = QLabel("TheOddsAPI")
+        odds_header.setObjectName("settingsSectionTitle")
+        layout.addWidget(odds_header)
+
+        odds_form = QFormLayout()
+        odds_form.setSpacing(14)
+        odds_form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft)
+        odds_form.setFormAlignment(Qt.AlignmentFlag.AlignTop)
+
+        self.odds_api_key_input = QLineEdit()
+        self.odds_api_key_input.setObjectName("oddsApiKeyInput")
+        self.odds_api_key_input.setPlaceholderText("Paste your API key from the-odds-api.com")
+        self.odds_api_key_input.setEchoMode(QLineEdit.EchoMode.Password)
+        saved_key = (settings_manager.get("ODDS_API_KEY") or "").strip()
+        if saved_key:
+            self.odds_api_key_input.setText(saved_key)
+        odds_form.addRow("API key", self.odds_api_key_input)
+
+        self.odds_status_label = QLabel()
+        self.odds_status_label.setObjectName("settingsLlmStatus")
+        self.odds_status_label.setWordWrap(True)
+        self._update_odds_status()
+        odds_form.addRow("", self.odds_status_label)
+
+        layout.addLayout(odds_form)
 
         thresholds_header = QLabel("Model thresholds")
         thresholds_header.setObjectName("settingsSectionTitle")
@@ -132,6 +158,17 @@ class SettingsWindow(QDialog):
     def _saved_model_name(self) -> str:
         return (settings_manager.get("LLM_MODEL") or "").strip()
 
+    def _update_odds_status(self) -> None:
+        key = self.odds_api_key_input.text().strip()
+        if key:
+            self.odds_status_label.setText(
+                "Required for live odds when generating tickets. Stored locally in settings.json."
+            )
+        else:
+            self.odds_status_label.setText(
+                "No API key set. Ticket generation needs live odds from TheOddsAPI."
+            )
+
     def _update_llm_status(self, server_online: bool, models: list[str]) -> None:
         saved = self._saved_model_name()
         if server_online:
@@ -201,6 +238,7 @@ class SettingsWindow(QDialog):
             settings_manager.set(key, spin.value())
 
         settings_manager.set("LLM_MODEL", self._selected_model_for_save())
+        settings_manager.set("ODDS_API_KEY", self.odds_api_key_input.text().strip())
 
         settings_manager.save_settings()
         self.accept()
@@ -208,8 +246,10 @@ class SettingsWindow(QDialog):
     def restore_defaults(self):
         # Update UI to reflect restored defaults while keeping saved model unchanged
         saved_model = settings_manager.get("LLM_MODEL", DEFAULT_SETTINGS["LLM_MODEL"])
+        saved_odds_key = settings_manager.get("ODDS_API_KEY", DEFAULT_SETTINGS["ODDS_API_KEY"])
         settings_manager.restore_defaults()
         settings_manager.set("LLM_MODEL", saved_model)
+        settings_manager.set("ODDS_API_KEY", saved_odds_key)
         settings_manager.save_settings()
 
         for key, spin in self.inputs.items():
