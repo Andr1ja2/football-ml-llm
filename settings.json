@@ -5,5 +5,6 @@
     "MIN_EDGE_OU25": 0.05,
     "MIN_MODEL_PROB_OU25": 0.45,
     "MAX_LEGS": 5,
-    "ASSISTANT_NAME": "\ubaa8 Agent"
+    "ASSISTANT_NAME": "\ubaa8 Agent",
+    "LLM_MODEL": "mistral:latest"
 }

@@ -11,7 +11,8 @@ DEFAULT_SETTINGS = {
     "MIN_EDGE_OU25": 0.05,
     "MIN_MODEL_PROB_OU25": 0.45,
     "MAX_LEGS": 5,
-    "ASSISTANT_NAME": "모 Agent"
+    "ASSISTANT_NAME": "모 Agent",
+    "LLM_MODEL": "",
 }
 
 class SettingsManager:

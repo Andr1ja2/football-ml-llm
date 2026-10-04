@@ -37,7 +37,7 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("BetAssist")
-        self.resize(1100, 700)
+        self.resize(1200, 700)
         self.is_processing = False
 
         self.chat_manager = ChatManager()

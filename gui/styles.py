@@ -347,6 +347,34 @@ def app_stylesheet() -> str:
         color: {TEXT_MUTED};
         margin-bottom: 8px;
     }}
+    QLabel#settingsSectionTitle {{
+        font-size: 14px;
+        font-weight: 600;
+        color: {TEXT_PRIMARY};
+        margin-top: 4px;
+    }}
+    QLabel#settingsLlmStatus {{
+        font-size: 11px;
+        color: {TEXT_MUTED};
+    }}
+    QComboBox#llmModelCombo {{
+        background-color: {BG_INPUT};
+        color: {TEXT_PRIMARY};
+        border: 1px solid {BORDER};
+        border-radius: {RADIUS_SM};
+        padding: 6px 10px;
+        min-height: 28px;
+    }}
+    QComboBox#llmModelCombo:focus {{
+        border-color: {BORDER_FOCUS};
+    }}
+    QComboBox#llmModelCombo:disabled {{
+        color: {TEXT_MUTED};
+    }}
+    QPushButton#settingsRefreshModels {{
+        min-height: 28px;
+        padding: 6px 12px;
+    }}
     QLabel {{
         color: {TEXT_SECONDARY};
         font-size: 13px;

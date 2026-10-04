@@ -71,14 +71,12 @@ class ChatManager:
 
     def load_session(self, session_id):
         """Loads conversation and tickets from the database."""
-        print(f"DEBUG: Loading session {session_id}")
         conn = get_connection()
         cur = conn.cursor()
 
         # Load tickets for this session
         cur.execute("SELECT ticket_json FROM tickets WHERE session_id = ? ORDER BY created_at ASC", (session_id,))
         ticket_rows = cur.fetchall()
-        print(f"DEBUG: Found {len(ticket_rows)} tickets for session {session_id}")
         self.session_tickets = [json.loads(r[0]) for r in ticket_rows]
 
         # Load conversation
@@ -87,12 +85,10 @@ class ChatManager:
         conn.close()
 
         if row:
-            print(f"DEBUG: Session {session_id} found in chat_sessions table")
             self.current_session_id = session_id
             self.conversation = json.loads(row[0])
             return True
 
-        print(f"DEBUG: Session {session_id} NOT found in chat_sessions table")
         return False
 
     def save_session(self, title=None, session_id=None):
