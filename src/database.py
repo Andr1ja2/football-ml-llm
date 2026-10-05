@@ -1,11 +1,26 @@
 # This script creates the SQLite database and the necessary tables for storing match data and betting odds.
+import shutil
 import sqlite3
-from pathlib import Path
+import sys
 
-DB_PATH = Path(__file__).resolve().parent.parent / "data" / "db.sqlite"
+from paths import DB_PATH, DB_TEMPLATE_PATH
+
 
 def get_connection():
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    # When packaged with PyInstaller, copy the bundled database
+    # to a writable location next to the executable.
+    if getattr(sys, "frozen", False) and not DB_PATH.exists():
+        if not DB_TEMPLATE_PATH.exists():
+            raise FileNotFoundError(
+                f"Bundled database template not found: {DB_TEMPLATE_PATH}"
+            )
+
+        shutil.copy2(DB_TEMPLATE_PATH, DB_PATH)
+
     return sqlite3.connect(DB_PATH)
+
 
 def init_db():
     conn = get_connection()
@@ -31,8 +46,8 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         match_id INTEGER,
         bookie TEXT,
-		market TEXT, -- e.g. "1X2", "BTTS", "GG2+"
-		outcome TEXT, -- e.g. "home", "draw", "away"
+        market TEXT, -- e.g. "1X2", "BTTS", "GG2+"
+        outcome TEXT, -- e.g. "home", "draw", "away"
         odds REAL,
         FOREIGN KEY(match_id) REFERENCES matches(id)
     );

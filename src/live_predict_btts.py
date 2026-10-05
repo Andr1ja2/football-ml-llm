@@ -16,8 +16,9 @@ from team_form import (
     compute_team_stats,
     load_match_history,
 )
+from paths import MODEL_DIR
 
-MODEL_PATH = Path(__file__).resolve().parent.parent / "data" / "processed" / "model_btts.pkl"
+MODEL_PATH = MODEL_DIR / "model_btts.pkl"
 MODEL = joblib.load(MODEL_PATH)
 
 HISTORY_DF = load_match_history()

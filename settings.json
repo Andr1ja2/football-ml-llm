@@ -7,5 +7,5 @@
     "MAX_LEGS": 5,
     "ASSISTANT_NAME": "\ubaa8 Agent",
     "LLM_MODEL": "mistral:latest",
-    "ODDS_API_KEY": "123"
+    "ODDS_API_KEY": ""
 }

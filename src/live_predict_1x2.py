@@ -11,8 +11,9 @@ from feature_defs import FEATURE_COLS_1X2
 from live_config import MIN_EDGE_1X2_HOME
 from live_odds import fetch_live_matches, prices_to_book_probs
 from team_form import TeamResolver, build_live_feature_dict, compute_team_stats, load_match_history
+from paths import MODEL_DIR
 
-MODEL_PATH = Path(__file__).resolve().parent.parent / "data" / "processed" / "model_1x2.pkl"
+MODEL_PATH = MODEL_DIR / "model_1x2.pkl"
 MODEL = joblib.load(MODEL_PATH)
 
 HISTORY_DF = load_match_history()
