@@ -1,11 +1,12 @@
-# Tool-Aware Football Betting Assistant (v1.2)
+# Tool-Aware Football Betting Assistant
 
 This project is an educational football betting analysis system that combines:
 
--   statistical models (1X2, BTTS, Over/Under)
--   deterministic combo selection
+-   machine learning
+-   deterministic betting logic
 -   live bookmaker odds
--   a local LLM (Mistral via Ollama) used strictly for explanation
+-   a local LLM (via Ollama) used strictly for explanation
+-   PySide6 desktop GUI
 
 The system uses machine learning models to estimate football match outcome probabilities and identify potential value bets based on bookmaker odds.
 
@@ -59,7 +60,7 @@ The combo engine:
 
 ### Live Odds Integration
 
-The system retrieves upcoming match odds from **TheOddsAPI** and applies the ML models to generate predictions for real matches.
+The system retrieves upcoming match odds from [**TheOddsAPI**](https://the-odds-api.com/) and applies the ML models to generate predictions for real matches.
 
 This allows the engine to generate tickets based on actual upcoming games.
 
@@ -67,15 +68,32 @@ This allows the engine to generate tickets based on actual upcoming games.
 
 ### LLM Integration
 
-A local LLM (Mistral via Ollama) is used for:
+A local LLM served through **Ollama** is used for:
 
--   explaining generated tickets
--   summarizing risk levels
--   interpreting the model output
+-   Understanding betting-related requests
+-   Selecting when the Python betting tool should be used
+-   Maintaining conversational context
+-   Explaining generated tickets
+-   Answering follow-up questions about the current conversation
 
 All predictions come from the ML models.
 
 ------------------------------------------------------------------------
+
+### Desktop GUI
+
+The project includes a **PySide6 desktop GUI**.
+
+The GUI currently provides:
+
+-   Chat interface
+-   Message history
+-   User message input (Enter-to-send / Shift+Enter for a new line)
+-   Resizable/Collapsible ticket area
+-   Settings interface
+-   Responsive chat processing using `QThread`
+
+The command-line chat remains available for development and testing.
 
 # Requirements
 
@@ -83,8 +101,10 @@ Recommended environment:
 
 -   Linux
 -   Python **3.10+**
--   Ollama
--   a local LLM model (e.g. `mistral`)
+-   Ollama (and a local LLM model)
+-   PySide6
+
+The exact Python dependencies are listed in `requirements.txt`.
 
 ------------------------------------------------------------------------
 
@@ -92,45 +112,69 @@ Recommended environment:
 
 Clone the repository:
 
-git clone https://github.com/Andr1ja2/football-ml-llm.git\
+```bash
+git clone https://github.com/Andr1ja2/football-ml-llm.git
 cd football-ml-llm
+```
 
-Create a virtual environment:
+Create and activate a virtual environment:
 
-python3 -m venv .venv\
+```bash
+python3 -m venv .venv
 source .venv/bin/activate
+```
 
 Install dependencies:
 
+```bash
 pip install -r requirements.txt
+```
+
+Install [Ollama](https://ollama.com/download) and at least one supported model. For example:
+```bash
+ollama pull qwen3:8b
+```
+
+(Please check if your system can run the model you choose)
+
+For Linux systems, PySide6 may also require system Qt/XCB libraries depending on the desktop environment.
 
 ------------------------------------------------------------------------
 
 # Environment Variables
 
-Create a `.env` file in the project root.
+If using the command-line client from a cloned repository create a `.env` file in the project root:
 
+```env
 ODDS_API_KEY=your_api_key_here
+```
 
-You can obtain an API key from:
+You can obtain an API key from: https://the-odds-api.com
 
-https://the-odds-api.com
+Do not commit `.env` or API keys to GitHub.
 
+If using the GUI App you can simply enter the API key in the settings menu.
 ------------------------------------------------------------------------
 
 # Database Setup
 
 Initialize the database:
 
+```bash
 python src/init_db.py
+```
 
 Download historical football data:
 
+```bash
 python src/data_downloader.py
+```
 
-Ingest the data into the database:
+Ingest the data:
 
+```bash
 python src/ingest.py
+```
 
 ------------------------------------------------------------------------
 
@@ -138,9 +182,11 @@ python src/ingest.py
 
 Train the prediction models:
 
-python src/train_1x2.py\
-python src/train_btts.py\
+```bash
+python src/train_1x2.py
+python src/train_btts.py
 python src/train_ou25.py
+```
 
 Trained models will be saved to:
 
@@ -152,16 +198,23 @@ data/processed/
 
 Start the system:
 
-python src/chat_cli.py -> Command Line Chat Client
+Command-Line Interface:
 
-python gui/main.py -> GUI Chat Application
+```bash
+python src/chat_cli.py
+```
+
+Desktop GUI:
+
+```bash
+python gui/main.py
+```
 
 Example interactions:
 
 generate a ticket\
-generate a 4 leg ticket\
+generate a 2 leg ticket\
 add one more\
-make it risky
 
 The assistant will:
 
