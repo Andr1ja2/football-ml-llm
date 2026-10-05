@@ -4,7 +4,11 @@ from llm_client import ask_model
 from tool_decider import decide_action
 from tool_router import run_tool
 from database import get_connection
-from src.live_config import MAX_LEGS
+
+try:
+    from src.live_config import MAX_LEGS
+except ModuleNotFoundError:
+    from live_config import MAX_LEGS
 
 DEFAULT_SIZE = 3
 

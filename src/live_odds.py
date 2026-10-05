@@ -9,15 +9,26 @@ from typing import Any
 import requests
 from dotenv import load_dotenv
 
-from src.live_config import (
-    BASE_URL,
-    ODDS_FORMAT,
-    ODDS_MARKETS,
-    ODDS_REGIONS,
-    OU25_POINT,
-    SPORTS,
-    settings_manager,
-)
+try:
+    from src.live_config import (
+        BASE_URL,
+        ODDS_FORMAT,
+        ODDS_MARKETS,
+        ODDS_REGIONS,
+        OU25_POINT,
+        SPORTS,
+        settings_manager,
+    )
+except ModuleNotFoundError:
+    from live_config import (
+        BASE_URL,
+        ODDS_FORMAT,
+        ODDS_MARKETS,
+        ODDS_REGIONS,
+        OU25_POINT,
+        SPORTS,
+        settings_manager,
+    )
 
 load_dotenv()
 

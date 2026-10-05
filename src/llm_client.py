@@ -2,7 +2,10 @@ import json
 
 import requests
 
-from src.live_config import settings_manager
+try:
+    from src.live_config import settings_manager
+except ModuleNotFoundError:
+    from live_config import settings_manager
 
 OLLAMA_GENERATE_URL = "http://localhost:11434/api/generate"
 OLLAMA_TAGS_URL = "http://localhost:11434/api/tags"

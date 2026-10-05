@@ -6,7 +6,7 @@ import json
 from chat_manager import ChatManager
 
 def main():
-    print("=== Tool-Aware Betting Chat (Mistral) ===")
+    print("=== Tool-Aware Betting Chat ===")
     print("Type 'exit' to quit.\n")
 
     chat_manager = ChatManager()
@@ -16,9 +16,10 @@ def main():
         if user_input.lower() in ("exit", "quit"):
             break
 
-        response = chat_manager.process_message(user_input)
+        response, ticket = chat_manager.process_message(user_input)
+        response = response.replace("\\n", "\n")
 
-        print("\nMistral:\n")
+        print("\nAgent:\n")
         print(response)
         print("-" * 60)
 
