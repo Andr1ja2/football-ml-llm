@@ -180,6 +180,13 @@ python src/ingest.py
 
 # Training the Models
 
+First generate the training datasets:
+
+```bash
+python src/features.py
+python src/features_goals.py
+```
+
 Train the prediction models:
 
 ```bash
